@@ -54,6 +54,9 @@
 #include "itkVectorFieldGradientImageFunction.h"
 #include "itkBSplineInterpolateImageFunction.h"
 #include "itkRescaleIntensityImageFilter.h"
+#include "itkSignedMaurerDistanceMapImageFilter.h"
+#include "itkCastImageFilter.h"
+#include "itkImageDuplicator.h"
 
 namespace itk
 {
@@ -607,6 +610,185 @@ public:
 // count/(TReal)(sz1+1) << std::endl;
     return outputMesh;
   }
+
+ ImagePointer  SignedDistanceMap(ImagePointer image)
+{
+float eps = 0.0001;
+typedef float maximum,minimum;
+typedef  itk::SignedMaurerDistanceMapImageFilter< ImageType, ImageType  > SignedMaurerDistanceMapImageFilterType;
+typedef itk::ImageDuplicator< ImageType > DuplicatorType;
+typename  DuplicatorType::Pointer duplicator = DuplicatorType::New();
+  duplicator->SetInputImage(image);
+  duplicator->Update();
+typename  ImageType::Pointer image_label = duplicator->GetOutput();
+
+typename  ImageType::Pointer image_output = ImageType::New();
+typename  ImageType::Pointer image2 = duplicator->GetOutput();
+
+typedef itk::CastImageFilter< ImageType,ImageType > CastFilterType;
+typename   CastFilterType::Pointer castFilter = CastFilterType::New();
+
+   castFilter->SetInput(image2);
+   castFilter->Update();
+   image_output = castFilter->GetOutput();
+typename ImageType::IndexType index;
+for (unsigned int x = 0; x < 255; x++)
+  {
+    for(unsigned int y = 0; y < 255; y++)
+    {
+      for(unsigned int z = 0; z < 255; z++)
+      {
+        index[0] = x;
+        index[1] = y;
+        index[2] = z;
+        image_output->SetPixel(index,0);
+       }
+      }
+  }
+
+//get the array of labels
+
+unsigned int array_label[100]={0};
+unsigned int i=0,j,pixelValue_label;
+for (unsigned int x = 0; x < 255; x++)
+  {
+    for(unsigned int y = 0; y < 255; y++)
+    {
+      for(unsigned int z = 0; z < 255; z++)
+      {
+//        ImageType::IndexType index;
+        index[0] = x;
+        index[1] = y;
+        index[2] = z;
+        pixelValue_label = image->GetPixel(index);
+        unsigned int k=0;
+          if (pixelValue_label !=0)
+            {
+                for(j=1;j<100;j++)
+                   {
+                      if( pixelValue_label == array_label[j-1])
+                         {
+                            k=k+1;
+                         }
+                    }
+                if(k==0 )
+                 {
+                    array_label[i]=pixelValue_label;
+                    i=i+1;
+                  }
+
+            }
+
+      }
+    }
+  }
+
+
+
+unsigned int m;
+for(m=0;array_label[m]>0;m++)
+{
+for (unsigned int x = 0; x < 255; x++)
+  {
+    for(unsigned int y = 0; y < 255; y++)
+    {
+      for(unsigned int z = 0; z < 255; z++)
+      {
+//      ImageType::IndexType index;
+      index[0] = x;
+      index[1] = y;
+      index[2] = z;
+
+      float pixelValue = image->GetPixel(index);
+
+      if (pixelValue == array_label[m])
+        {
+        image_label->SetPixel(index,0);
+        }
+      else
+        {
+        image_label->SetPixel(index,1);
+        }
+      }
+    }
+  }
+
+
+typename SignedMaurerDistanceMapImageFilterType::Pointer distanceMapImageFilter = SignedMaurerDistanceMapImageFilterType::New();
+
+distanceMapImageFilter->SetInput(image_label);
+typename ImageType::Pointer image_sdt = ImageType::New();
+image_sdt = distanceMapImageFilter->GetOutput();
+
+image_sdt->Update();
+
+float minimum=0, maximum, pixelValue_am;
+bool flag1=true;
+
+
+ for (unsigned int x = 0; x < 255; x++)
+  {
+    for(unsigned int y = 0; y < 255; y++)
+    {
+      for(unsigned int z = 0; z < 255; z++)
+      {
+
+  //      ImageType::IndexType index;
+        index[0] = x;
+        index[1] = y;
+        index[2] = z;
+        pixelValue_am = image_sdt->GetPixel(index);
+          if (image_label->GetPixel(index)==0)
+           {
+             if(flag1)
+               {
+                      flag1=false;
+                     maximum = pixelValue_am;
+                }
+
+
+              if(pixelValue_am > maximum)
+                {
+                  maximum = pixelValue_am;
+                }
+           }
+
+      }
+    }
+  }
+
+
+
+float pixelValue_sdt, pixelValue_sdt_norm,diff;
+diff=(maximum-minimum)+eps;
+bool flag2; // for debug only
+for (unsigned int x = 0; x < 255; x++)
+  {
+    for(unsigned int y = 0; y < 255; y++)
+    {
+      for(unsigned int z = 0; z < 255; z++)
+      {
+//        ImageType::IndexType index;
+        index[0] = x;
+        index[1] = y;
+        index[2] = z;
+        pixelValue_sdt = image_sdt->GetPixel(index);
+        if (image_label->GetPixel(index)==0)
+        {
+             pixelValue_sdt_norm = (pixelValue_sdt-minimum)/diff;
+             image_output->SetPixel(index,pixelValue_sdt_norm);
+        }
+      }
+    }
+  }
+
+}
+
+
+return image_output;
+
+}
+
 
   ImagePointer WarpMultiTransform( ImagePointer referenceimage,  ImagePointer movingImage,  AffineTransformPointer aff,
                                    DisplacementFieldPointer totalField, bool doinverse,
@@ -1334,7 +1516,7 @@ ImagePointer  DownScaling(ImagePointer image,  TReal scalingFactor )
 //std::cout << this->m_ScaleFactor << std::endl;
   //        this->m_SmoothMovingImages[metricCount] = this->SmoothImageToScale(
     //          this->m_SimilarityMetrics[metricCount]->GetMovingImage(), this->m_ScaleFactor );
-     // update time 
+      
 
 	    this->m_SmoothFixedImages[metricCount]= this->DownScaling(
                   this->m_SimilarityMetrics[metricCount]->GetFixedImage(), this->m_ScaleFactor );

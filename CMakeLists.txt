@@ -3,7 +3,9 @@ cmake_policy(VERSION 2.8.5)
 
 set(LIBRARY_SOVERSION_INFO 2)
 set(LIBRARY_VERSION_INFO 2.1.0)
-# only for test!!!!!!!!
+# asdf
+
+#sdfasfonly for test!!!!!!!!
 set(LOCAL_PROJECT_NAME ANTS)
 INCLUDE(InstallRequiredSystemLibraries)
 ## NOTE THERE SHOULD BE NO PROJECT STATEMENT HERE!

@@ -53,6 +53,7 @@
 #include "ANTS_affine_registration2.h"
 #include "itkVectorFieldGradientImageFunction.h"
 #include "itkBSplineInterpolateImageFunction.h"
+#include "itkRescaleIntensityImageFilter.h"
 
 namespace itk
 {
@@ -713,6 +714,19 @@ public:
     return outimg;
   }
 
+ImagePointer  DownScaling(ImagePointer image,  TReal scalingFactor )
+    {
+    typedef itk::ShrinkImageFilter <ImageType, ImageType> ShrinkImageFilterType;
+    typename ShrinkImageFilterType::Pointer shrinkFilter = ShrinkImageFilterType::New();
+    shrinkFilter->SetInput(image);
+    shrinkFilter->SetShrinkFactor(0, scalingFactor); // shrink the first dimension by a factor of scalingFactor (i.e. 256 gets changed to 256/scalingFactor)
+    shrinkFilter->SetShrinkFactor(1, scalingFactor); // shrink the second dimension by a factor of scalingFactor (i.e. 256 gets changed to 256/scalingFactor)
+    shrinkFilter->SetShrinkFactor(2, scalingFactor);
+    shrinkFilter->Update();
+    image = shrinkFilter->GetOutput();
+  
+    return image;
+  }
   ImagePointer  SmoothImageToScale(ImagePointer image,  TReal scalingFactor )
   {
     typename ImageType::SpacingType inputSpacing = image->GetSpacing();
@@ -1315,20 +1329,34 @@ public:
         {
         if( this->m_GaussianSmoothingSigmas.size() == 0 )
           {
-          this->m_SmoothFixedImages[metricCount] = this->SmoothImageToScale(
-              this->m_SimilarityMetrics[metricCount]->GetFixedImage(), this->m_ScaleFactor );
-          this->m_SmoothMovingImages[metricCount] = this->SmoothImageToScale(
-              this->m_SimilarityMetrics[metricCount]->GetMovingImage(), this->m_ScaleFactor );
+        //  this->m_SmoothFixedImages[metricCount] = this->SmoothImageToScale(
+          //    this->m_SimilarityMetrics[metricCount]->GetFixedImage(), this->m_ScaleFactor );
+//std::cout << this->m_ScaleFactor << std::endl;
+  //        this->m_SmoothMovingImages[metricCount] = this->SmoothImageToScale(
+    //          this->m_SimilarityMetrics[metricCount]->GetMovingImage(), this->m_ScaleFactor );
+     // update time 
+
+	    this->m_SmoothFixedImages[metricCount]= this->DownScaling(
+                  this->m_SimilarityMetrics[metricCount]->GetFixedImage(), this->m_ScaleFactor );
+            this->m_SmoothMovingImages[metricCount]= this->DownScaling(
+        	  this->m_SimilarityMetrics[metricCount]->GetMovingImage(), this->m_ScaleFactor );
+
           }
         else
           {
-          this->m_SmoothFixedImages[metricCount] = this->GaussianSmoothImage(
-              this->m_SimilarityMetrics[metricCount]->GetFixedImage(),
-              this->m_GaussianSmoothingSigmas[currentLevel] );
-          this->m_SmoothMovingImages[metricCount] = this->GaussianSmoothImage(
-              this->m_SimilarityMetrics[metricCount]->GetMovingImage(),
-              this->m_GaussianSmoothingSigmas[currentLevel] );
-          }
+      //    this->m_SmoothFixedImages[metricCount] = this->GaussianSmoothImage(
+        //      this->m_SimilarityMetrics[metricCount]->GetFixedImage(),
+          //    this->m_GaussianSmoothingSigmas[currentLevel] );
+         // this->m_SmoothMovingImages[metricCount] = this->GaussianSmoothImage(
+          //    this->m_SimilarityMetrics[metricCount]->GetMovingImage(),
+           //   this->m_GaussianSmoothingSigmas[currentLevel] );
+	  this->m_SmoothFixedImages[metricCount]= this->DownScaling(
+             this->m_SimilarityMetrics[metricCount]->GetFixedImage(), this->m_ScaleFactor );
+          this->m_SmoothMovingImages[metricCount]= this->DownScaling(
+             this->m_SimilarityMetrics[metricCount]->GetMovingImage(), this->m_ScaleFactor );
+          
+
+	  }
         }
       fixedImage = this->m_SmoothFixedImages[0];
       movingImage = this->m_SmoothMovingImages[0];
@@ -1344,7 +1372,8 @@ public:
         {
         this->m_FixedImageAffineTransform = NULL;
         }
-      while( !converged )
+      
+while( !converged )
         {
         for( unsigned int metricCount = 0;  metricCount <   numberOfMetrics;  metricCount++ )
           {

@@ -47,6 +47,8 @@
 #include "itkWarpImageWAffineFilter.h"
 #include "itkPointSet.h"
 #include "itkVector.h"
+
+#include "itkImageFileWriter.h"
 #include "itkBSplineScatteredDataPointSetToImageFilter.h"
 #include "itkGeneralToBSplineDisplacementFieldFilter.h"
 #include "itkBSplineControlPointImageFunction.h"
@@ -95,6 +97,9 @@ public:
   typedef typename PointSetType::PointType           PointType;
   typedef typename PointSetType::PixelType           PointDataType;
   typedef typename ImageType::PointType              ImagePointType;
+
+//  typedef  typename itk::ImageFileWriter<ImageType> writertype;
+
 
   typedef TransformType                             AffineTransformType;
   typedef typename AffineTransformType::Pointer     AffineTransformPointer;
@@ -614,6 +619,8 @@ public:
  ImagePointer  SignedDistanceMap(ImagePointer image)
 {
 float eps = 0.0001;
+
+
 typedef float maximum,minimum;
 typedef  itk::SignedMaurerDistanceMapImageFilter< ImageType, ImageType  > SignedMaurerDistanceMapImageFilterType;
 typedef itk::ImageDuplicator< ImageType > DuplicatorType;
@@ -632,11 +639,18 @@ typename   CastFilterType::Pointer castFilter = CastFilterType::New();
    castFilter->Update();
    image_output = castFilter->GetOutput();
 typename ImageType::IndexType index;
-for (unsigned int x = 0; x < 255; x++)
+
+typename  ImageType::RegionType region = image->GetLargestPossibleRegion();
+typename  ImageType::SizeType size = region.GetSize();
+
+
+
+
+for (unsigned int x = 0; x < size[0]; x++)
   {
-    for(unsigned int y = 0; y < 255; y++)
+    for(unsigned int y = 0; y < size[1]; y++)
     {
-      for(unsigned int z = 0; z < 255; z++)
+      for(unsigned int z = 0; z < size[2]; z++)
       {
         index[0] = x;
         index[1] = y;
@@ -650,11 +664,11 @@ for (unsigned int x = 0; x < 255; x++)
 
 unsigned int array_label[100]={0};
 unsigned int i=0,j,pixelValue_label;
-for (unsigned int x = 0; x < 255; x++)
+for (unsigned int x = 0; x < size[0]; x++)
   {
-    for(unsigned int y = 0; y < 255; y++)
+    for(unsigned int y = 0; y < size[1]; y++)
     {
-      for(unsigned int z = 0; z < 255; z++)
+      for(unsigned int z = 0; z < size[2]; z++)
       {
 //        ImageType::IndexType index;
         index[0] = x;
@@ -688,11 +702,11 @@ for (unsigned int x = 0; x < 255; x++)
 unsigned int m;
 for(m=0;array_label[m]>0;m++)
 {
-for (unsigned int x = 0; x < 255; x++)
+for (unsigned int x = 0; x < size[0]; x++)
   {
-    for(unsigned int y = 0; y < 255; y++)
+    for(unsigned int y = 0; y < size[1]; y++)
     {
-      for(unsigned int z = 0; z < 255; z++)
+      for(unsigned int z = 0; z < size[2]; z++)
       {
 //      ImageType::IndexType index;
       index[0] = x;
@@ -726,11 +740,11 @@ float minimum=0, maximum, pixelValue_am;
 bool flag1=true;
 
 
- for (unsigned int x = 0; x < 255; x++)
+ for (unsigned int x = 0; x < size[0]; x++)
   {
-    for(unsigned int y = 0; y < 255; y++)
+    for(unsigned int y = 0; y < size[1]; y++)
     {
-      for(unsigned int z = 0; z < 255; z++)
+      for(unsigned int z = 0; z < size[2]; z++)
       {
 
   //      ImageType::IndexType index;
@@ -761,12 +775,12 @@ bool flag1=true;
 
 float pixelValue_sdt, pixelValue_sdt_norm,diff;
 diff=(maximum-minimum)+eps;
-bool flag2; // for debug only
-for (unsigned int x = 0; x < 255; x++)
+//bool flag2; // for debug only
+for (unsigned int x = 0; x < size[0]; x++)
   {
-    for(unsigned int y = 0; y < 255; y++)
+    for(unsigned int y = 0; y < size[1]; y++)
     {
-      for(unsigned int z = 0; z < 255; z++)
+      for(unsigned int z = 0; z < size[2]; z++)
       {
 //        ImageType::IndexType index;
         index[0] = x;
@@ -830,7 +844,7 @@ return image_output;
     warper->SetInput(movingImage);
     warper->SetEdgePaddingValue( 0);
     warper->SetSmoothScale(1);
-    warper->SetInterpolator(interp1);
+    warper->SetInterpolator(interpnn);
     if( this->m_UseNN )
       {
       warper->SetInterpolator(interpnn);
@@ -1357,14 +1371,14 @@ ImagePointer  DownScaling(ImagePointer image,  TReal scalingFactor )
   void DeformableOptimization()
   {
     DisplacementFieldPointer updateField = NULL;
-
+    
     this->SetUpParameters();
     typename ImageType::SpacingType spacing;
     VectorType zero;
     zero.Fill(0);
     std::cout << " setting N-TimeSteps = "
                      << this->m_NTimeSteps << " trunc " << this->m_GaussianTruncation << std::endl;
-
+//    typedef   itk::ImageFileWriter<ImageType> writertype;
     // Get subsample factors and gaussian smoothing sigmas if specified
     // by the user.
     typename OptionType::Pointer subsamplingOption = this->m_Parser->GetOption( "subsampling-factors" );
@@ -1442,7 +1456,9 @@ ImagePointer  DownScaling(ImagePointer image,  TReal scalingFactor )
       this->m_SimilarityMetrics[metricCount]->GetMovingImage()->SetDirection(
         this->m_SimilarityMetrics[0]->GetMovingImage()->GetDirection() );
       }
-    /* here, we assign all point set pointers to any single
+
+
+    /* here, we assign all point set pointers to aney single
        non-null point-set pointer */
     for( unsigned int metricCount = 0;  metricCount <   numberOfMetrics;  metricCount++ )
       {
@@ -1460,11 +1476,19 @@ ImagePointer  DownScaling(ImagePointer image,  TReal scalingFactor )
           }
         }
       }
+
+//        typename itk::ImageFileWriter<ImageType>::Pointer writer = itk::ImageFileWriter<ImageType>::New();
+//        writer->SetFileName( "outtest2.nii.gz" );
+ //       writer->SetInput( this->m_SimilarityMetrics[0]->GetMovingImage() );
+ //       writer->Update();
+
+
     this->m_SmoothFixedImages.resize(numberOfMetrics, NULL);
     this->m_SmoothMovingImages.resize(numberOfMetrics, NULL);
     for( unsigned int currentLevel = 0; currentLevel < this->m_NumberOfLevels; currentLevel++ )
       {
       this->m_CurrentLevel = currentLevel;
+      typedef typename itk::ImageFileWriter<ImageType> writertype;
       typedef Vector<TReal, 1>                      ProfilePointDataType;
       typedef Image<ProfilePointDataType, 1>        CurveType;
       typedef PointSet<ProfilePointDataType, 1>     EnergyProfileType;
@@ -1540,8 +1564,19 @@ ImagePointer  DownScaling(ImagePointer image,  TReal scalingFactor )
 
 	  }
         }
+      
+
+
       fixedImage = this->m_SmoothFixedImages[0];
       movingImage = this->m_SmoothMovingImages[0];
+//        typedef typename itk::ImageFileWriter<ImageType> writertype;     
+//   typedef itk::ImageFileWriter<ImageType> writertype;
+        typename itk::ImageFileWriter<ImageType>::Pointer writer1 = itk::ImageFileWriter<ImageType>::New();
+        writer1->SetFileName( "outtest.nii.gz" );
+        writer1->SetInput( this->m_SimilarityMetrics[0]->GetMovingImage() );
+        writer1->Update();
+
+
 
       unsigned int nmet = this->m_SimilarityMetrics.size();
       this->m_LastEnergy.resize(nmet, 1.e12);

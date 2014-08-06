@@ -33,6 +33,7 @@
 #include "itkVectorNeighborhoodOperatorImageFilter.h"
 #include "vnl/vnl_math.h"
 #include "ANTS_affine_registration2.h"
+#include "itkImageFileWriter.h"
 #include "itkWarpImageMultiTransformFilter.h"
 // #include "itkVectorImageFileWriter.h"
 
@@ -635,19 +636,28 @@ ANTSImageRegistrationOptimizer<TDimension, TReal>
       this->m_AffineTransform->GetInverse(affinverse);
       }
 
+        typedef itk::ImageFileWriter< ImageType >  WriterType;
 // for each metric, warp the assoc. Images
 /** We loop Over This To Do MultiVariate */
 /** FIXME really should pass an image list and then warp each one in
       turn  then expand the update field to fit size of total
       deformation */
     ImagePointer wmimage = NULL;
+    ImagePointer wmimage1 = NULL;
     if( fixedwarp )
       {
-      wmimage =
+      wmimage1 =
         this->WarpMultiTransform(  this->m_ReferenceSpaceImage, this->m_SmoothMovingImages[metricCount],
                                    this->m_AffineTransform,
                                    fixedwarp, false,
                                    NULL );
+
+//        wmimage = wmimage1;
+        wmimage = this->SignedDistanceMap( wmimage1 );
+//        typename WriterType::Pointer writer = WriterType::New();
+//        writer->SetFileName( "outtest1.nii.gz" );
+//        writer->SetInput( wmimage );
+//        writer->Update();
       }
     else
       {
@@ -658,12 +668,22 @@ ANTSImageRegistrationOptimizer<TDimension, TReal>
 
 //    std::cout << " C " << std::endl;
     ImagePointer wfimage = NULL;
+    ImagePointer wfimage1 = NULL;
     if( movingwarp )
       {
-      wfimage =
+      wfimage1 =
         this->WarpMultiTransform( this->m_ReferenceSpaceImage, this->m_SmoothFixedImages[metricCount], NULL, movingwarp,
                                   false,
                                   this->m_FixedImageAffineTransform );
+
+//        typename WriterType::Pointer writer2 = WriterType::New();
+//        writer2->SetFileName( "outtest2.nii.gz" );
+//        writer2->SetInput( wfimage1 );
+//        writer2->Update();
+
+      wfimage = this->SignedDistanceMap( wfimage1);
+      
+
       }
     else
       {

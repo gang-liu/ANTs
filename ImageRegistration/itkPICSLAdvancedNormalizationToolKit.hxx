@@ -224,7 +224,7 @@ PICSLAdvancedNormalizationToolKit<TDimension, TReal>
     {
     continue_affine = std::string("false");
     }
-  if( continue_affine == "true" )
+  if( continue_affine == "false" )
     {
     std::cout << "Continue affine registration from the input" << std::endl;     // << aff_init << std::endl;
 
@@ -416,8 +416,8 @@ PICSLAdvancedNormalizationToolKit<TDimension, TReal>
       typename ReaderType::Pointer fixedImageFileReader = ReaderType::New();
       fixedImageFileReader->SetFileName( option->GetFunction( i )->GetParameter(  parameterCount ) );
       fixedImageFileReader->Update();
-      ImagePointer fixedImage = this->PreprocessImage(
-          fixedImageFileReader->GetOutput() );
+      ImagePointer fixedImage = 
+          fixedImageFileReader->GetOutput() ;
       similarityMetric->SetFixedImage( fixedImage );
       parameterCount++;
 
@@ -427,9 +427,15 @@ PICSLAdvancedNormalizationToolKit<TDimension, TReal>
       typename ReaderType::Pointer movingImageFileReader = ReaderType::New();
       movingImageFileReader->SetFileName( option->GetFunction( i )->GetParameter(  parameterCount ) );
       movingImageFileReader->Update();
-      ImagePointer movingImage = this->PreprocessImage(
-          movingImageFileReader->GetOutput() );
+      ImagePointer movingImage = 
+          movingImageFileReader->GetOutput() ;
       similarityMetric->SetMovingImage( movingImage );
+
+//        typename itk::ImageFileWriter<ImageType>::Pointer writer = itk::ImageFileWriter<ImageType>::New();
+//        writer->SetFileName( "outtest3.nii.gz" );
+//        writer->SetInput( movingImageFileReader->GetOutput() );
+//        writer->Update();
+
       typename SimilarityMetricType::RadiusType radius;
       radius.Fill( 0 );
       parameterCount++;
